@@ -9,7 +9,7 @@ import {
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
 async function wrap<T>(fn: (key: string) => Promise<T>): Promise<Result<T>> {
-  const key = process.env.LOVABLE_API_KEY;
+  const key = process.env['LOVABLE_API_KEY'];
   if (!key) return { ok: false, error: "AI is not configured." };
   try { return { ok: true, data: await fn(key) }; }
   catch (e) {
