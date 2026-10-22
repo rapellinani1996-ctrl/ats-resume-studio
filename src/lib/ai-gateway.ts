@@ -2,7 +2,7 @@
 import type { z } from "zod";
 import type { PromptDef } from "./prompts";
 
-export const AI_MODEL = "google/gemini-2.5-flash";
+export const AI_MODEL = "google/gemini-3.8-flash";
 const URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 export class AiError extends Error {
