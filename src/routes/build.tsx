@@ -47,7 +47,7 @@ function BuildPage() {
       const needsMoreInfo: string[] = [];
       const experience = [...r.experience];
       for (let k = 0; k < experience.length; k++) {
-        const x = experience[k];
+        const x = experience[k]!;
         if (!x.notes.trim()) continue;
         setBusy(`Polishing notes for role ${k + 1} of ${experience.length}…`);
         const res = await polishNotes({ data: { notes: x.notes } });

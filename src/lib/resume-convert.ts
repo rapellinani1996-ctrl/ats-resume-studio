@@ -6,7 +6,7 @@ const itemText = (x: unknown): string => {
   if (typeof x === "string") return x;
   if (x && typeof x === "object") {
     const o = x as Record<string, unknown>;
-    const parts = [o.name, o.description, Array.isArray(o.technologies) && o.technologies.length ? `(${o.technologies.join(", ")})` : ""];
+    const parts = [o['name'], o['description'], Array.isArray(o['technologies']) && o['technologies'].length ? `(${o['technologies'].join(", ")})` : ""];
     const t = parts.filter(Boolean).join(" — ");
     return t || Object.values(o).filter((v) => typeof v === "string").join(" — ");
   }
@@ -17,7 +17,7 @@ const itemText = (x: unknown): string => {
 export function fromParsed(p: Partial<ParsedResume>, base: Resume): Resume {
   const exp = (p.experience ?? []).map((x) => {
     let start = x.start_date ?? "", end = x.end_date ?? "";
-    if (!start && !end && x.dates) [start, end = ""] = x.dates.split(/\s*[–—-]\s*/);
+    if (!start && !end && x.dates) { const [a = "", b = ""] = x.dates.split(/\s*[–—-]\s*/); start = a; end = b; }
     return { ...emptyExperience(), title: x.job_title ?? "", company: x.company ?? "", location: x.location ?? "", start, end, notes: (x.bullets ?? []).join("\n") };
   });
   const edu = (p.education ?? []).map((e) =>

@@ -22,7 +22,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ReviewPage() {
   const { state } = useResume();
   const { r, set } = useResumeEdit();
-  const ats = state.ats;
+  const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
   return (
     <PageShell step={2} title="Review & edit" subtitle="Every line should be something you can defend in an interview.">
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -53,7 +53,7 @@ function ReviewPage() {
                 <KeywordList title="Missing keywords" items={ats.missing} tone="bg-secondary text-destructive" />
                 <div>
                   <p className="label-text">Top 3 fixes</p>
-                  <ol className="list-decimal space-y-1 pl-5 text-sm">{ats.fixes.map((f) => <li key={f}>{f}</li>)}</ol>
+                  <ol className="list-decimal space-y-1 pl-5 text-sm">{ats.fixes.map((f: string) => <li key={f}>{f}</li>)}</ol>
                 </div>
               </>
             )}
