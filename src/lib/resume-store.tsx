@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { JdAnalysis, ScoreReport } from "./ai-schemas";
 
-export type Experience = { title: string; company: string; start: string; end: string; notes: string };
+export type Experience = { title: string; company: string; location: string; start: string; end: string; notes: string };
 export type Education = { school: string; degree: string; year: string };
 export type Resume = {
   personal: { name: string; email: string; phone: string; location: string; linkedin: string };
@@ -8,37 +9,53 @@ export type Resume = {
   experience: Experience[];
   skills: string;
   education: Education[];
+  certifications: string; // one per line
+  projects: string; // one per line
   targetTitle: string;
 };
-export type AtsResult = {
-  scoreBefore: number;
-  scoreAfter: number;
-  matched: string[];
-  missing: string[];
-  fixes: string[];
+
+export type TailorNotes = { changes: string[]; missing: string[]; suggestions: string[] };
+export type BuildNotes = { needsMoreInfo: string[]; missingSections: string[]; suggestions: string[] };
+
+type State = {
+  resume: Resume;
+  jd: string;
+  rawText: string;
+  jdAnalysis: JdAnalysis | null;
+  scoreBefore: ScoreReport | null;
+  scoreAfter: ScoreReport | null;
+  tailorNotes: TailorNotes | null;
+  buildNotes: BuildNotes | null;
+  coverLetter: string;
 };
 
-type State = { resume: Resume; jd: string; rawText: string; ats: AtsResult | null; coverLetter: string };
-
-export const emptyExperience = (): Experience => ({ title: "", company: "", start: "", end: "", notes: "" });
+export const emptyExperience = (): Experience => ({ title: "", company: "", location: "", start: "", end: "", notes: "" });
 export const emptyEducation = (): Education => ({ school: "", degree: "", year: "" });
 
+export const emptyResume = (): Resume => ({
+  personal: { name: "", email: "", phone: "", location: "", linkedin: "" },
+  summary: "",
+  experience: [emptyExperience()],
+  skills: "",
+  education: [emptyEducation()],
+  certifications: "",
+  projects: "",
+  targetTitle: "",
+});
+
 const initial: State = {
-  resume: {
-    personal: { name: "", email: "", phone: "", location: "", linkedin: "" },
-    summary: "",
-    experience: [emptyExperience()],
-    skills: "",
-    education: [emptyEducation()],
-    targetTitle: "",
-  },
+  resume: emptyResume(),
   jd: "",
   rawText: "",
-  ats: null,
+  jdAnalysis: null,
+  scoreBefore: null,
+  scoreAfter: null,
+  tailorNotes: null,
+  buildNotes: null,
   coverLetter: "",
 };
 
-const KEY = "ats-resume-session";
+const KEY = "ats-resume-session-v2";
 const Ctx = createContext<{ state: State; update: (p: Partial<State>) => void; reset: () => void } | null>(null);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {

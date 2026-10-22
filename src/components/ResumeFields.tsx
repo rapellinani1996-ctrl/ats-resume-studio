@@ -31,7 +31,7 @@ export function ExperienceFields({ notesLabel = "Raw notes" }: { notesLabel?: st
       {r.experience.map((x, i) => (
         <div key={i} className="rounded-lg border border-border p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            {(["title", "company", "start", "end"] as const).map((k) => (
+            {(["title", "company", "location", "start", "end"] as const).map((k) => (
               <div key={k}><label className="label-text">{k}</label><input className="field" value={x[k]} onChange={(e) => edit(i, k, e.target.value)} /></div>
             ))}
           </div>
@@ -71,6 +71,22 @@ export function EducationFields() {
         </div>
       ))}
       <button className="btn btn-ghost" onClick={() => set({ education: [...r.education, emptyEducation()] })}>+ Add education</button>
+    </div>
+  );
+}
+
+export function ExtrasFields() {
+  const { r, set } = useResumeEdit();
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="label-text">Projects (optional, one per line)</label>
+        <textarea className="field min-h-24" placeholder="Project name — what it does (tech used)" value={r.projects} onChange={(e) => set({ projects: e.target.value })} />
+      </div>
+      <div>
+        <label className="label-text">Certifications (optional, one per line)</label>
+        <textarea className="field min-h-20" value={r.certifications} onChange={(e) => set({ certifications: e.target.value })} />
+      </div>
     </div>
   );
 }
