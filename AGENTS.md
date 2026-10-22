@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Resume session state lives in a React context persisted to sessionStorage (src/lib/resume-store.tsx); nothing is stored permanently by design.
