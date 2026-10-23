@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { JdAnalysis, ScoreReport } from "./ai-schemas";
 
-export type Experience = { title: string; company: string; location: string; start: string; end: string; notes: string };
+export type Experience = { title: string; company: string; location: string; start: string; end: string; notes: string; fresher?: boolean };
 export type Education = { school: string; degree: string; year: string };
 export type Resume = {
   personal: { name: string; email: string; phone: string; location: string; linkedin: string };
@@ -63,7 +63,12 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     const raw = sessionStorage.getItem(KEY);
-    if (raw) try { setState({ ...initial, ...JSON.parse(raw) }); } catch { /* ignore */ }
+    if (raw) try {
+      const parsed = JSON.parse(raw) as State;
+      // Older sessions predate the fresher flag — coerce it in.
+      parsed.resume.experience = parsed.resume.experience.map((x) => ({ fresher: false, ...x }));
+      setState({ ...initial, ...parsed });
+    } catch { /* ignore */ }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) sessionStorage.setItem(KEY, JSON.stringify(state)); }, [state, loaded]);

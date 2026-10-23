@@ -1,6 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
 import { EducationFields, ExperienceFields, PersonalFields, SkillsField, useResumeEdit } from "@/components/ResumeFields";
+import { scoreResume, tailorResume } from "@/lib/ai.functions";
+import { DAILY_LIMIT, consume, remaining } from "@/lib/rate-limit";
+import { fromParsed, toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
 
 export const Route = createFileRoute("/review")({
@@ -20,8 +24,45 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function ReviewPage() {
-  const { state } = useResume();
+  const { state, update } = useResume();
   const { r, set } = useResumeEdit();
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const left = typeof window === "undefined" ? DAILY_LIMIT : remaining(window.localStorage);
+  const canTailor = !!state.jdAnalysis && !busy && left > 0;
+
+  const tailor = async () => {
+    if (!state.jdAnalysis) return;
+    setError("");
+    // Count each tailoring run against the daily limit before calling the AI.
+    if (!consume(window.localStorage)) {
+      return setError(`You've used all ${DAILY_LIMIT} free generations for today. Come back tomorrow.`);
+    }
+    try {
+      setBusy("Tailoring your resume to the job…");
+      const t = await tailorResume({ data: { resumeJson: JSON.stringify(toSpec(r)), jdJson: JSON.stringify(state.jdAnalysis) } });
+      if (!t.ok) throw new Error(t.error);
+      const tailored = fromParsed(t.data, r);
+      setBusy("Scoring before & after…");
+      const [before, after] = await Promise.all([
+        scoreResume({ data: { resumeJson: JSON.stringify(toSpec(r)), jdJson: JSON.stringify(state.jdAnalysis) } }),
+        scoreResume({ data: { resumeJson: JSON.stringify(toSpec(tailored)), jdJson: JSON.stringify(state.jdAnalysis) } }),
+      ]);
+      if (!before.ok) throw new Error(before.error);
+      if (!after.ok) throw new Error(after.error);
+      update({
+        resume: tailored,
+        scoreBefore: before.data,
+        scoreAfter: after.data,
+        tailorNotes: { changes: t.data.changes_made, missing: t.data.genuinely_missing_keywords, suggestions: t.data.suggestions_to_close_gaps },
+        coverLetter: "",
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally { setBusy(""); }
+  };
+
   const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
   return (
     <PageShell step={2} title="Review & edit" subtitle="Every line should be something you can defend in an interview.">
@@ -57,8 +98,26 @@ function ReviewPage() {
                 </div>
               </>
             )}
-            <button className="btn btn-ghost w-full" disabled>Tailor to job (AI)</button>
-            <Link to="/download" className="btn btn-primary w-full">Continue to export →</Link>
+            {state.tailorNotes && (
+              <div className="space-y-3 border-t border-border pt-4">
+                <NoteList title="What the AI changed" items={state.tailorNotes.changes} />
+                <NoteList title="Keywords you genuinely lack" items={state.tailorNotes.missing} />
+                <NoteList title="How to close the gaps" items={state.tailorNotes.suggestions} />
+              </div>
+            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <button className="btn btn-ghost w-full" disabled={!canTailor} onClick={tailor}>
+              {busy || "Tailor to job (AI)"}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              {state.jdAnalysis
+                ? left > 0
+                  ? `${left} of ${DAILY_LIMIT} free generations left today.`
+                  : "Daily limit reached — come back tomorrow."
+                : "Paste a job description first to enable tailoring."}
+            </p>
+            {!state.jdAnalysis && <Link to="/job" className="btn btn-ghost w-full">← Add a job description</Link>}
+            <button className="btn btn-primary w-full" onClick={() => navigate({ to: "/download" })}>Continue to export →</button>
           </div>
         </aside>
       </div>
@@ -71,6 +130,16 @@ function KeywordList({ title, items, tone }: { title: string; items: string[]; t
     <div>
       <p className="label-text">{title}</p>
       <div className="flex flex-wrap gap-2">{items.map((k) => <span key={k} className={`rounded-full px-3 py-1 text-xs ${tone}`}>{k}</span>)}</div>
+    </div>
+  );
+}
+
+function NoteList({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <p className="label-text">{title}</p>
+      <ul className="list-disc space-y-1 pl-5 text-sm">{items.map((t, k) => <li key={k}>{t}</li>)}</ul>
     </div>
   );
 }
