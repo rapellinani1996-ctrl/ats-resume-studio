@@ -27,6 +27,7 @@ type State = {
   tailorNotes: TailorNotes | null;
   buildNotes: BuildNotes | null;
   coverLetter: string;
+  tailored: Resume | null;
 };
 
 export const emptyExperience = (): Experience => ({ title: "", company: "", location: "", start: "", end: "", notes: "" });
@@ -53,6 +54,7 @@ const initial: State = {
   tailorNotes: null,
   buildNotes: null,
   coverLetter: "",
+  tailored: null,
 };
 
 const KEY = "ats-resume-session-v2";

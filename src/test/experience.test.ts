@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { isValidDateDMY, isValidPhone } from "@/components/ResumeFields";
+import { isValidDateDMY, isValidPhone, resumeIssues } from "@/components/ResumeFields";
 import { fromParsed } from "@/lib/resume-convert";
 import { emptyResume } from "@/lib/resume-store";
 
 describe("phone validation", () => {
-  it("accepts exactly 10 digits", () => {
+  it("accepts digits of any length", () => {
     expect(isValidPhone("9876543210")).toBe(true);
+    expect(isValidPhone("98765432101")).toBe(true);
   });
-  it("rejects 9 or 11 digits and non-digits", () => {
-    expect(isValidPhone("987654321")).toBe(false);
-    expect(isValidPhone("98765432101")).toBe(false);
+  it("rejects letters", () => {
     expect(isValidPhone("98765abcde")).toBe(false);
   });
   it("allows empty while typing", () => {
@@ -43,5 +42,19 @@ describe("fresher inference from parsed resumes", () => {
     );
     expect(r.experience[0]!.fresher).toBe(false);
     expect(r.experience[0]!.end).toBe("Present");
+  });
+});
+
+describe("review validations block tailoring/export", () => {
+  it("flags missing dates on an experienced entry", () => {
+    const r = emptyResume();
+    r.personal.name = "A"; r.personal.phone = "123";
+    expect(resumeIssues(r).length).toBe(2);
+  });
+  it("passes for fresher with name and phone", () => {
+    const r = emptyResume();
+    r.personal.name = "A"; r.personal.phone = "123";
+    r.experience[0]!.fresher = true;
+    expect(resumeIssues(r)).toEqual([]);
   });
 });

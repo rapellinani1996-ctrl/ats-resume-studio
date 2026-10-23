@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
-import { analyzeJd } from "@/lib/ai.functions";
+import { analyzeJd, scoreResume } from "@/lib/ai.functions";
+import { toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
 
 export const Route = createFileRoute("/job")({
@@ -35,7 +36,13 @@ function JobPage() {
       if (!res.ok) { setBusy(false); return setError(res.error); }
       data = res.data; cache.set(jd, data);
     }
-    update({ jdAnalysis: data, scoreBefore: null, scoreAfter: null, tailorNotes: null, coverLetter: "" });
+    // Score the user's original resume right away so they see the "before" number.
+    let scoreBefore = null;
+    if (data && (state.rawText || state.resume.experience.some((x) => x.title || x.notes))) {
+      const s = await scoreResume({ data: { resumeJson: JSON.stringify(toSpec(state.resume)), jdJson: JSON.stringify(data) } });
+      if (s.ok) scoreBefore = s.data;
+    }
+    update({ jdAnalysis: data, scoreBefore, scoreAfter: null, tailorNotes: null, tailored: null, coverLetter: "" });
     navigate({ to: "/review" });
   };
 
@@ -52,7 +59,7 @@ function JobPage() {
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{len} characters{len < 200 && " — need at least 200"}</span>
         <button className="btn btn-primary" disabled={len < 200 || busy} onClick={analyze}>
-          {busy ? "Analyzing…" : "Analyze Job"}
+          {busy ? "Analyzing & scoring…" : "Analyze Job"}
         </button>
       </div>
       {a && !busy && (
