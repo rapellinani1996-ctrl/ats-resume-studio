@@ -1,9 +1,25 @@
 import { emptyEducation, emptyExperience, useResume, type Resume } from "@/lib/resume-store";
 
-/** Phone must be exactly 10 digits (empty allowed while typing). */
-export const isValidPhone = (v: string) => v === "" || /^\d{10}$/.test(v);
+/** Phone accepts digits only (any length; empty allowed while typing). */
+export const isValidPhone = (v: string) => /^\d*$/.test(v);
 /** Dates use DD/MM/YY. */
 export const isValidDateDMY = (v: string) => /^\d{2}\/\d{2}\/\d{2}$/.test(v);
+
+/** Problems that must be fixed before tailoring or exporting. */
+export function resumeIssues(r: Resume): string[] {
+  const out: string[] = [];
+  if (!r.personal.name.trim()) out.push("Contact: add your name.");
+  if (!r.personal.phone) out.push("Contact: add your mobile number.");
+  else if (!isValidPhone(r.personal.phone)) out.push("Contact: mobile number must contain numbers only.");
+  if (r.personal.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.personal.email)) out.push("Contact: email looks invalid.");
+  r.experience.forEach((x, i) => {
+    if (x.fresher) return;
+    const n = `Experience ${i + 1}${x.title ? ` (${x.title})` : ""}`;
+    if (!isValidDateDMY(x.start)) out.push(`${n}: start date must be DD/MM/YY.`);
+    if (x.end !== "Present" && !isValidDateDMY(x.end)) out.push(`${n}: end date must be DD/MM/YY, or tick "I currently work here".`);
+  });
+  return out;
+}
 
 export function useResumeEdit() {
   const { state, update } = useResume();
@@ -25,14 +41,13 @@ export function PersonalFields() {
             className="field"
             value={r.personal[k]}
             inputMode={k === "phone" ? "numeric" : undefined}
-            maxLength={k === "phone" ? 10 : undefined}
-            placeholder={k === "phone" ? "10-digit mobile number" : undefined}
+            placeholder={k === "phone" ? "Numbers only" : undefined}
             onChange={(e) => {
-              const v = k === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value;
+              const v = k === "phone" ? e.target.value.replace(/\D/g, "") : e.target.value;
               set({ personal: { ...r.personal, [k]: v } });
             }}
           />
-          {k === "phone" && phoneBad && <p className="mt-1 text-xs text-destructive">Phone must be exactly 10 digits.</p>}
+          {k === "phone" && phoneBad && <p className="mt-1 text-xs text-destructive">Phone can contain numbers only.</p>}
         </div>
       ))}
     </div>
