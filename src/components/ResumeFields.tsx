@@ -41,7 +41,7 @@ export function PersonalFields() {
 
 export function ExperienceFields({ notesLabel = "Raw notes" }: { notesLabel?: string }) {
   const { r, set } = useResumeEdit();
-  const edit = (i: number, k: string, v: string) =>
+  const edit = (i: number, k: string, v: string | boolean) =>
     set({ experience: r.experience.map((x, j) => (j === i ? { ...x, [k]: v } : x)) });
   return (
     <div className="space-y-6">
@@ -51,7 +51,7 @@ export function ExperienceFields({ notesLabel = "Raw notes" }: { notesLabel?: st
             <input
               type="checkbox"
               checked={!!x.fresher}
-              onChange={(e) => edit(i, "fresher", e.target.checked ? "true" : "")}
+              onChange={(e) => edit(i, "fresher", e.target.checked)}
             />
             Fresher — no work dates for this entry
           </label>
