@@ -102,3 +102,16 @@
 
 @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 @utility pop-in { animation: pop-in 0.35s ease-out both; }
+
+/* Print only the chosen area (resume or cover letter), hide the rest of the app. */
+@media print {
+  body[data-print] * { visibility: hidden; }
+  body[data-print="resume"] .resume-print,
+  body[data-print="resume"] .resume-print *,
+  body[data-print="letter"] .letter-print,
+  body[data-print="letter"] .letter-print * { visibility: visible; }
+  body[data-print="resume"] .resume-print,
+  body[data-print="letter"] .letter-print {
+    position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none;
+  }
+}

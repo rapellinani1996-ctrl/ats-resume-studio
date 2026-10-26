@@ -93,3 +93,19 @@ export async function downloadDocx(r: Resume) {
 export function downloadText(text: string, filename: string) {
   save(new Blob([text], { type: "text/plain" }), filename);
 }
+
+/** Plain-text rendering of the resume, used for share/copy/email/WhatsApp. */
+export function resumeToText(r: Resume): string {
+  const s = sections(r);
+  const out: string[] = [s.name, s.contact, ""];
+  if (s.summary) out.push("PROFESSIONAL SUMMARY", s.summary, "");
+  if (s.skills) out.push("SKILLS", s.skills, "");
+  if (s.experience.length) {
+    out.push("PROFESSIONAL EXPERIENCE");
+    for (const x of s.experience) out.push(x.head, x.dates, ...x.bullets.map((b) => `• ${b}`), "");
+  }
+  if (s.education.length) out.push("EDUCATION", ...s.education, "");
+  if (s.certifications.length) out.push("CERTIFICATIONS", ...s.certifications.map((c) => `• ${c}`), "");
+  if (s.projects.length) out.push("PROJECTS", ...s.projects.map((p) => `• ${p}`));
+  return out.filter((l, i) => !(l === "" && out[i - 1] === "")).join("\n").trim();
+}

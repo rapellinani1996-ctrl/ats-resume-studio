@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
+import { ShareButtons } from "@/components/ShareButtons";
 import { coverLetter } from "@/lib/ai.functions";
-import { downloadDocx, downloadPdf, downloadText } from "@/lib/export-files";
+import { downloadDocx, downloadPdf, downloadText, resumeToText } from "@/lib/export-files";
 import { toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
 
@@ -22,8 +23,16 @@ function DownloadPage() {
   const { state, update } = useResume();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const r = state.resume;
+  // Export the ATS-friendly tailored version when one exists.
+  const r = state.tailored ?? state.resume;
   const p = r.personal;
+
+  const print = (what: "resume" | "letter") => {
+    document.body.dataset["print"] = what;
+    const cleanup = () => { delete document.body.dataset["print"]; window.removeEventListener("afterprint", cleanup); };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label); setError("");
@@ -43,7 +52,12 @@ function DownloadPage() {
   return (
     <PageShell step={3} title="Preview & download">
       <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
-        <article className="mx-auto w-full max-w-[720px] bg-paper p-12 shadow-[var(--shadow-card)]">
+        <article className="resume-print mx-auto w-full max-w-[720px] bg-paper p-12 shadow-[var(--shadow-card)]">
+          {state.tailored && (
+            <p className="mb-4 inline-block rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+              ATS-tailored for {state.jdAnalysis?.job_title ?? "the job"}
+            </p>
+          )}
           <h2 className="text-4xl">{p.name || "Your Name"}</h2>
           <p className="text-sm text-muted-foreground">{[p.email, p.phone, p.location, p.linkedin].filter(Boolean).join(" · ") || "email · phone · location"}</p>
           {r.summary && <p className="mt-4 text-sm">{r.summary}</p>}
@@ -74,16 +88,24 @@ function DownloadPage() {
             <p className="text-xs text-muted-foreground">Add a job description to generate a cover letter.</p>
           )}
           {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="border-t border-border pt-3">
+            <p className="label-text">Share resume</p>
+            <ShareButtons text={resumeToText(r)} title={`${p.name || "My"} — Resume`} onPrint={() => print("resume")} />
+          </div>
           <p className="text-xs text-muted-foreground">Cover letters are free — they don't count toward your daily limit.</p>
         </aside>
       </div>
       {state.coverLetter && (
         <section className="card-surface mx-auto mt-8 w-full max-w-[720px] p-8">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-2xl">Cover letter</h3>
             <button className="btn btn-ghost" onClick={() => downloadText(state.coverLetter, `${(p.name || "cover_letter").replace(/[^\w]+/g, "_")}.txt`)}>Download .txt</button>
           </div>
-          <p className="whitespace-pre-line text-sm">{state.coverLetter}</p>
+          <p className="letter-print whitespace-pre-line text-sm">{state.coverLetter}</p>
+          <div className="mt-4 border-t border-border pt-3">
+            <p className="label-text">Share cover letter</p>
+            <ShareButtons text={state.coverLetter} title={`${p.name || "My"} — Cover Letter`} onPrint={() => print("letter")} />
+          </div>
         </section>
       )}
     </PageShell>
