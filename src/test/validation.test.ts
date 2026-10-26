@@ -28,15 +28,16 @@ describe("resumeIssues — blocks tailor/export until fixed", () => {
     expect(resumeIssues(r)).toContain("Contact: email looks invalid.");
   });
   it("rejects dates not in DD/MM/YY", () => {
-    const r = ok(); r.experience[0].start = "2023-06-01";
+    const r = ok(); r.experience[0]!.start = "2023-06-01";
     expect(resumeIssues(r).some((i) => i.includes("start date must be DD/MM/YY"))).toBe(true);
   });
   it("accepts 'Present' as end date without a date", () => {
-    const r = ok(); r.experience[0].end = "Present";
+    const r = ok(); r.experience[0]!.end = "Present";
     expect(resumeIssues(r)).toEqual([]);
   });
   it("skips date checks for fresher entries", () => {
-    const r = ok(); r.experience[0] = { ...r.experience[0], start: "", end: "", fresher: true };
+    const r = ok();
+    r.experience[0]!.start = ""; r.experience[0]!.end = ""; r.experience[0]!.fresher = true;
     expect(resumeIssues(r)).toEqual([]);
   });
 });

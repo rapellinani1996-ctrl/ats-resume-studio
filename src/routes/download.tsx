@@ -28,8 +28,8 @@ function DownloadPage() {
   const p = r.personal;
 
   const print = (what: "resume" | "letter") => {
-    document.body.dataset.print = what;
-    const cleanup = () => { delete document.body.dataset.print; window.removeEventListener("afterprint", cleanup); };
+    document.body.dataset["print"] = what;
+    const cleanup = () => { delete document.body.dataset["print"]; window.removeEventListener("afterprint", cleanup); };
     window.addEventListener("afterprint", cleanup);
     window.print();
   };
