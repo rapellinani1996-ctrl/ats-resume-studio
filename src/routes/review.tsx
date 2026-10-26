@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
-import { EducationFields, ExperienceFields, PersonalFields, SkillsField, useResumeEdit } from "@/components/ResumeFields";
+import { EducationFields, ExperienceFields, PersonalFields, SkillsField, resumeIssues, useResumeEdit } from "@/components/ResumeFields";
 import { scoreResume, tailorResume } from "@/lib/ai.functions";
 import { DAILY_LIMIT, consume, remaining } from "@/lib/rate-limit";
 import { fromParsed, toSpec } from "@/lib/resume-convert";
@@ -30,7 +30,8 @@ function ReviewPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const left = typeof window === "undefined" ? DAILY_LIMIT : remaining(window.localStorage);
-  const canTailor = !!state.jdAnalysis && !busy && left > 0;
+  const issues = resumeIssues(r);
+  const canTailor = !!state.jdAnalysis && !busy && left > 0 && issues.length === 0;
 
   const tailor = async () => {
     if (!state.jdAnalysis) return;
@@ -51,8 +52,10 @@ function ReviewPage() {
       ]);
       if (!before.ok) throw new Error(before.error);
       if (!after.ok) throw new Error(after.error);
+      // Keep the user's editable resume untouched — the tailored version is
+      // stored separately and only replaces it when they click "Add to resume".
       update({
-        resume: tailored,
+        tailored,
         scoreBefore: before.data,
         scoreAfter: after.data,
         tailorNotes: { changes: t.data.changes_made, missing: t.data.genuinely_missing_keywords, suggestions: t.data.suggestions_to_close_gaps },
@@ -61,6 +64,10 @@ function ReviewPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally { setBusy(""); }
+  };
+
+  const addToResume = () => {
+    if (state.tailored) update({ resume: state.tailored, tailored: null });
   };
 
   const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
@@ -105,6 +112,21 @@ function ReviewPage() {
                 <NoteList title="How to close the gaps" items={state.tailorNotes.suggestions} />
               </div>
             )}
+            {state.tailored && (
+              <div className="pop-in space-y-3 rounded-lg border border-accent bg-accent/20 p-4">
+                <p className="text-sm font-semibold">AI-tailored version ready</p>
+                <p className="text-xs text-muted-foreground">
+                  Your editable resume is unchanged. Add the tailored version to keep editing it — the export page uses the ATS-friendly version either way.
+                </p>
+                <button className="btn btn-accent w-full" onClick={addToResume}>Add to resume</button>
+              </div>
+            )}
+            {issues.length > 0 && (
+              <div className="space-y-1 rounded-lg border border-destructive/40 p-3">
+                <p className="label-text">Fix these first</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-destructive">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
+              </div>
+            )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             <button className="btn btn-ghost w-full" disabled={!canTailor} onClick={tailor}>
               {busy || "Tailor to job (AI)"}
@@ -117,7 +139,7 @@ function ReviewPage() {
                 : "Paste a job description first to enable tailoring."}
             </p>
             {!state.jdAnalysis && <Link to="/job" className="btn btn-ghost w-full">← Add a job description</Link>}
-            <button className="btn btn-primary w-full" onClick={() => navigate({ to: "/download" })}>Continue to export →</button>
+            <button className="btn btn-primary w-full" disabled={issues.length > 0} onClick={() => navigate({ to: "/download" })}>Continue to export →</button>
           </div>
         </aside>
       </div>
