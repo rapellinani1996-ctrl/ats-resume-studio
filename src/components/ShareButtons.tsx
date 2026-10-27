@@ -31,9 +31,16 @@ export function ShareButtons({ text, title, onPrint }: { text: string; title: st
     setTimeout(() => setHint((h) => (h === msg ? "" : h)), 2500);
   };
 
+  // Open in a new browser tab via a temporary anchor — user-gesture pop-ups
+  // from <a target="_blank"> aren't subject to window.open restrictions.
   const open = (url: string) => {
-    const win = window.open(url, "_blank", "noopener,noreferrer");
-    if (!win) flash("Pop-up blocked — allow pop-ups for this site.");
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const copy = async () => {
