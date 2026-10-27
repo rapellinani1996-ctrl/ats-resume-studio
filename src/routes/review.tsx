@@ -73,6 +73,12 @@ function ReviewPage() {
   const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
   return (
     <PageShell step={2} title="Review & edit" subtitle="Every line should be something you can defend in an interview.">
+      {issues.length > 0 && (
+        <div className="pop-in mb-6 rounded-lg border border-destructive/40 bg-card p-4">
+          <p className="label-text">Fix these first — then Tailor & Export unlock</p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
+        </div>
+      )}
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           <Section title="Contact"><PersonalFields /></Section>
