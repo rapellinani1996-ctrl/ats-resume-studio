@@ -1,23 +1,81 @@
 import { useState } from "react";
 
-/** Copy / Email / WhatsApp / Print share row for a block of text (resume or cover letter). */
+/**
+ * Web-based share row for a block of text (resume or cover letter).
+ * Email opens Gmail compose in a browser tab (never hijacks the desktop
+ * Outlook app), WhatsApp opens WhatsApp Web in a browser tab. Long text is
+ * copied to the clipboard first so nothing is lost to URL limits.
+ */
+
+// Gmail and WhatsApp URLs choke on very long bodies; keep the pre-filled
+// text under this and rely on the clipboard for the rest.
+const MAX_URL_TEXT = 1500;
+
+function trimForUrl(text: string) {
+  return text.length > MAX_URL_TEXT ? `${text.slice(0, MAX_URL_TEXT).trimEnd()}…` : text;
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function ShareButtons({ text, title, onPrint }: { text: string; title: string; onPrint?: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard unavailable */ }
+  const [hint, setHint] = useState("");
+  const flash = (msg: string) => {
+    setHint(msg);
+    setTimeout(() => setHint((h) => (h === msg ? "" : h)), 2500);
   };
-  const mail = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
-  const wa = `https://wa.me/?text=${encodeURIComponent(`${title}\n\n${text}`)}`;
+
+  // Open in a new browser tab via a temporary anchor — user-gesture pop-ups
+  // from <a target="_blank"> aren't subject to window.open restrictions.
+  const open = (url: string) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const copy = async () => {
+    if (await copyText(text)) flash("Copied to clipboard.");
+  };
+
+  // Gmail compose in the browser — the desktop mail app never takes over.
+  const email = () => {
+    const long = text.length > MAX_URL_TEXT;
+    const body = trimForUrl(text);
+    void copyText(long ? text : `${title}\n\n${body}`);
+    open(
+      `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`,
+    );
+    if (long) flash("Full text copied — paste it into the email.");
+  };
+
+  // WhatsApp Web in a browser tab; full text stays on the clipboard as a backup.
+  const whatsapp = () => {
+    const full = `${title}\n\n${text}`;
+    const long = full.length > MAX_URL_TEXT;
+    void copyText(full);
+    open(`https://api.whatsapp.com/send?text=${encodeURIComponent(trimForUrl(full))}`);
+    if (long) flash("Full text copied — paste it into WhatsApp.");
+  };
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <button className="btn btn-ghost" onClick={copy}>{copied ? "Copied!" : "Copy"}</button>
-      <a className="btn btn-ghost" href={mail}>Email</a>
-      <a className="btn btn-ghost" href={wa} target="_blank" rel="noreferrer">WhatsApp</a>
-      {onPrint && <button className="btn btn-ghost" onClick={onPrint}>Print</button>}
+    <div>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn btn-ghost" onClick={email}>Email</button>
+        <button className="btn btn-ghost" onClick={whatsapp}>WhatsApp</button>
+        <button className="btn btn-ghost" onClick={copy}>Copy</button>
+        {onPrint && <button className="btn btn-ghost" onClick={onPrint}>Print</button>}
+      </div>
+      {hint && <p className="mt-2 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
