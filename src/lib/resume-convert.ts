@@ -1,4 +1,5 @@
 import type { ParsedResume } from "./ai-schemas";
+import { normalizeDate } from "./dates";
 import { emptyEducation, emptyExperience, type Resume } from "./resume-store";
 
 const lines = (s: string) => s.split("\n").map((l) => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
@@ -19,8 +20,8 @@ export function fromParsed(p: Partial<ParsedResume>, base: Resume): Resume {
     let start = x.start_date ?? "", end = x.end_date ?? "";
     if (!start && !end && x.dates) { const [a = "", b = ""] = x.dates.split(/\s*[–—-]\s*/); start = a; end = b; }
     // No dates at all → treat as a fresher entry (dates frozen in the UI).
-    const fresher = !(x.start_date ?? "") && !(x.end_date ?? "");
-    return { ...emptyExperience(), title: x.job_title ?? "", company: x.company ?? "", location: x.location ?? "", start, end, notes: (x.bullets ?? []).join("\n"), fresher };
+    const fresher = !start && !end;
+    return { ...emptyExperience(), title: x.job_title ?? "", company: x.company ?? "", location: x.location ?? "", start: normalizeDate(start), end: normalizeDate(end), notes: (x.bullets ?? []).join("\n"), fresher };
   });
   const edu = (p.education ?? []).map((e) =>
     typeof e === "string" ? { ...emptyEducation(), degree: e } : { school: e.institution ?? "", degree: e.degree ?? "", year: e.year ?? "" },

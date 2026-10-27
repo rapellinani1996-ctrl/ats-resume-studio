@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { JdAnalysis, ScoreReport } from "./ai-schemas";
+import { normalizeDate } from "./dates";
 
 export type Experience = { title: string; company: string; location: string; start: string; end: string; notes: string; fresher?: boolean };
 export type Education = { school: string; degree: string; year: string };
@@ -67,8 +68,10 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     const raw = sessionStorage.getItem(KEY);
     if (raw) try {
       const parsed = JSON.parse(raw) as State;
-      // Older sessions predate the fresher flag — coerce it in.
-      parsed.resume.experience = parsed.resume.experience.map((x) => ({ fresher: false, ...x }));
+      // Older sessions predate the fresher flag and DD/MM/YY dates — coerce both in.
+      const fixExp = (xs: Experience[]) => xs.map((x) => ({ fresher: false, ...x, start: normalizeDate(x.start), end: normalizeDate(x.end) }));
+      parsed.resume.experience = fixExp(parsed.resume.experience);
+      if (parsed.tailored) parsed.tailored.experience = fixExp(parsed.tailored.experience);
       setState({ ...initial, ...parsed });
     } catch { /* ignore */ }
     setLoaded(true);
