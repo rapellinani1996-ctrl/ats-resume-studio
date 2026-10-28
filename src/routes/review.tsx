@@ -31,11 +31,13 @@ function ReviewPage() {
   const navigate = useNavigate();
   const left = typeof window === "undefined" ? DAILY_LIMIT : remaining(window.localStorage);
   const issues = resumeIssues(r);
-  const canTailor = !!state.jdAnalysis && !busy && left > 0 && issues.length === 0;
+  const canTailor = !!state.jdAnalysis && !busy && left > 0;
+  const [showIssues, setShowIssues] = useState(false);
 
   const tailor = async () => {
     if (!state.jdAnalysis) return;
     setError("");
+    if (issues.length) return setShowIssues(true);
     // Count each tailoring run against the daily limit before calling the AI.
     if (!consume(window.localStorage)) {
       return setError(`You've used all ${DAILY_LIMIT} free generations for today. Come back tomorrow.`);
@@ -73,12 +75,6 @@ function ReviewPage() {
   const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
   return (
     <PageShell step={2} title="Review & edit" subtitle="Every line should be something you can defend in an interview.">
-      {issues.length > 0 && (
-        <div className="pop-in mb-6 rounded-lg border border-destructive/40 bg-card p-4">
-          <p className="label-text">Fix these first — then Tailor & Export unlock</p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
-        </div>
-      )}
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           <Section title="Contact"><PersonalFields /></Section>
@@ -127,10 +123,10 @@ function ReviewPage() {
                 <button className="btn btn-accent w-full" onClick={addToResume}>Add to resume</button>
               </div>
             )}
-            {issues.length > 0 && (
-              <div className="space-y-1 rounded-lg border border-destructive/40 p-3">
-                <p className="label-text">Fix these first</p>
-                <ul className="list-disc space-y-1 pl-5 text-xs text-destructive">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
+            {showIssues && issues.length > 0 && (
+              <div className="pop-in space-y-1 rounded-lg border border-border bg-secondary/40 p-3">
+                <p className="text-xs font-semibold">A few details need a quick update:</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
               </div>
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -145,7 +141,7 @@ function ReviewPage() {
                 : "Paste a job description first to enable tailoring."}
             </p>
             {!state.jdAnalysis && <Link to="/job" className="btn btn-ghost w-full">← Add a job description</Link>}
-            <button className="btn btn-primary w-full" disabled={issues.length > 0} onClick={() => navigate({ to: "/download" })}>Continue to export →</button>
+            <button className="btn btn-primary w-full" onClick={() => (issues.length ? setShowIssues(true) : navigate({ to: "/download" }))}>Continue to export →</button>
           </div>
         </aside>
       </div>
