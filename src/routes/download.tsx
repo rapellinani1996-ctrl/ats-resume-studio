@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
 import { ShareButtons } from "@/components/ShareButtons";
@@ -20,7 +20,8 @@ export const Route = createFileRoute("/download")({
 });
 
 function DownloadPage() {
-  const { state, update } = useResume();
+  const { state, update, reset } = useResume();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   // Export the ATS-friendly tailored version when one exists.
@@ -93,6 +94,17 @@ function DownloadPage() {
             <ShareButtons text={resumeToText(r)} title={`${p.name || "My"} — Resume`} onPrint={() => print("resume")} />
           </div>
           <p className="text-xs text-muted-foreground">Cover letters are free — they don't count toward your daily limit.</p>
+          <button
+            className="btn btn-ghost w-full"
+            onClick={() => {
+              if (!window.confirm("Start again? This clears your resume, job description and cover letter.")) return;
+              reset();
+              sessionStorage.removeItem("ats-resume-session-v2");
+              navigate({ to: "/" });
+            }}
+          >
+            Start again
+          </button>
         </aside>
       </div>
       {state.coverLetter && (
