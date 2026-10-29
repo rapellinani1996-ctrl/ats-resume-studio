@@ -13,6 +13,8 @@ export const Route = createFileRoute("/upload")({
       { name: "description", content: "Drop a PDF, DOCX or TXT resume to start tailoring." },
       { property: "og:title", content: "Upload Resume — ATS Resume Builder" },
       { property: "og:description", content: "Drop a PDF, DOCX or TXT resume to start tailoring." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: UploadPage,

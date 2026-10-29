@@ -8,6 +8,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Upload or build a resume, paste a job description, and get an ATS-optimized resume and cover letter. Truth only." },
       { property: "og:title", content: "ATS Resume Builder" },
       { property: "og:description", content: "Tailor your resume to any job description with an honest ATS score." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
