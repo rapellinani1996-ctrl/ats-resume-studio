@@ -1,10 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
 import { ShareButtons } from "@/components/ShareButtons";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { coverLetter } from "@/lib/ai.functions";
 import { downloadDocx, downloadPdf, downloadText, resumeToText } from "@/lib/export-files";
-import { toSpec } from "@/lib/resume-convert";
+import { bulletLines, toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
 
 export const Route = createFileRoute("/download")({
@@ -14,6 +16,8 @@ export const Route = createFileRoute("/download")({
       { name: "description", content: "Preview and download your ATS-ready resume as PDF or DOCX, plus a cover letter." },
       { property: "og:title", content: "Download Resume — ATS Resume Builder" },
       { property: "og:description", content: "Preview and download your ATS-ready resume as PDF or DOCX." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: DownloadPage,
@@ -52,6 +56,7 @@ function DownloadPage() {
 
   return (
     <PageShell step={3} title="Preview & download">
+      <Button asChild variant="outline" className="mb-6"><Link to="/review"><ArrowLeft />Back</Link></Button>
       <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
         <article className="resume-print mx-auto w-full max-w-[720px] bg-paper p-12 shadow-[var(--shadow-card)]">
           {state.tailored && (
@@ -65,7 +70,8 @@ function DownloadPage() {
           <h3 className="mt-6 border-b border-border pb-1 text-xl">Experience</h3>
           {r.experience.map((x, i) => (
             <div key={i} className="mt-3 text-sm">
-              <div className="flex justify-between font-semibold"><span>{x.title || "Role"}{x.company && `, ${x.company}`}</span><span>{x.fresher ? "Fresher" : [x.start, x.end].filter(Boolean).join(" – ")}</span></div>
+              <div className="flex flex-wrap justify-between gap-2 font-semibold"><span>{x.title || "Role"}{x.company && `, ${x.company}`}</span><span>{x.fresher ? "Fresher" : [x.start, x.end].filter(Boolean).join(" – ")}</span></div>
+              {x.location && <p className="text-muted-foreground">{x.location}</p>}
               <p className="whitespace-pre-line text-muted-foreground">{x.notes}</p>
             </div>
           ))}
@@ -73,6 +79,8 @@ function DownloadPage() {
           <p className="mt-2 text-sm">{r.skills || "—"}</p>
           <h3 className="mt-6 border-b border-border pb-1 text-xl">Education</h3>
           {r.education.map((e, i) => <p key={i} className="mt-2 text-sm">{[e.degree, e.school, e.year].filter(Boolean).join(", ") || "—"}</p>)}
+          {r.certifications.trim() && <><h3 className="mt-6 border-b border-border pb-1 text-xl">Certifications</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{bulletLines(r.certifications).map((line, i) => <li key={i}>{line}</li>)}</ul></>}
+          {r.projects.trim() && <><h3 className="mt-6 border-b border-border pb-1 text-xl">Projects</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{bulletLines(r.projects).map((line, i) => <li key={i}>{line}</li>)}</ul></>}
         </article>
         <aside className="space-y-3 lg:sticky lg:top-6 lg:self-start">
           <button className="btn btn-primary w-full" disabled={!!busy} onClick={() => run("Building PDF…", () => downloadPdf(r))}>

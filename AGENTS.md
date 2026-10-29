@@ -12,3 +12,4 @@
 - Resume session state lives in a React context persisted to sessionStorage (src/lib/resume-store.tsx); nothing is stored permanently by design.
 - AI prompts in src/lib/prompts.ts are copied verbatim from the user's product spec — never edit their wording; only the {PLACEHOLDER} slots may be filled.
 - The daily limit (3/day, src/lib/rate-limit.ts, per-browser localStorage) counts tailoring runs only; cover letter generation is free by user's choice.
+- Tailored output is merged through mergeTailoredResume before acceptance so omitted AI sections cannot erase original resume details.
