@@ -13,3 +13,4 @@
 - AI prompts in src/lib/prompts.ts are copied verbatim from the user's product spec — never edit their wording; only the {PLACEHOLDER} slots may be filled.
 - The daily limit (3/day, src/lib/rate-limit.ts, per-browser localStorage) counts tailoring runs only; cover letter generation is free by user's choice.
 - Tailored output is merged through mergeTailoredResume before acceptance so omitted AI sections cannot erase original resume details.
+- Acceptance uses resume-acceptance to append only candidate-supplied suggestion details; export reads the accepted editable resume so unaccepted drafts and AI advice never become candidate claims.

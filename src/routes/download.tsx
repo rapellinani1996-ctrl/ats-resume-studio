@@ -28,8 +28,8 @@ function DownloadPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  // Export the ATS-friendly tailored version when one exists.
-  const r = state.tailored ?? state.resume;
+  // Preview, sharing and files always use the explicitly accepted, editable resume.
+  const r = state.resume;
   const p = r.personal;
 
   const print = (what: "resume" | "letter") => {
@@ -59,7 +59,7 @@ function DownloadPage() {
       <Button asChild variant="outline" className="mb-6"><Link to="/review"><ArrowLeft />Back</Link></Button>
       <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
         <article className="resume-print mx-auto w-full max-w-[720px] bg-paper p-12 shadow-[var(--shadow-card)]">
-          {state.tailored && (
+          {state.tailorNotes && !state.tailored && (
             <p className="mb-4 inline-block rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
               ATS-tailored for {state.jdAnalysis?.job_title ?? "the job"}
             </p>

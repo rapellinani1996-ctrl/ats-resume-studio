@@ -7,6 +7,7 @@ import { scoreResume, tailorResume } from "@/lib/ai.functions";
 import { DAILY_LIMIT, consume, remaining } from "@/lib/rate-limit";
 import { mergeTailoredResume, toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
+import { acceptTailoredResume, type SuggestionDetail } from "@/lib/resume-acceptance";
 
 export const Route = createFileRoute("/review")({
   head: () => ({
@@ -36,6 +37,7 @@ function ReviewPage() {
   const issues = resumeIssues(r);
   const canTailor = !!state.jdAnalysis && !busy && left > 0;
   const [showIssues, setShowIssues] = useState(false);
+  const [suggestionDetails, setSuggestionDetails] = useState<Record<number, SuggestionDetail>>({});
 
   const tailor = async () => {
     if (!state.jdAnalysis) return;
@@ -66,13 +68,30 @@ function ReviewPage() {
         tailorNotes: { changes: t.data.changes_made, missing: t.data.genuinely_missing_keywords, suggestions: t.data.suggestions_to_close_gaps },
         coverLetter: "",
       });
+      setSuggestionDetails({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally { setBusy(""); }
   };
 
-  const addToResume = () => {
-    if (state.tailored) update({ resume: state.tailored, tailored: null });
+  const addToResume = async () => {
+    if (!state.tailored) return;
+    const details = Object.values(suggestionDetails).filter((d) => d.text.trim());
+    const accepted = acceptTailoredResume(state.tailored, details);
+    setError("");
+    try {
+      setBusy("Adding changes to your resume…");
+      let after = state.scoreAfter;
+      if (details.length && state.jdAnalysis) {
+        const result = await scoreResume({ data: { resumeJson: JSON.stringify(toSpec(accepted)), jdJson: JSON.stringify(state.jdAnalysis) } });
+        if (!result.ok) throw new Error(result.error);
+        after = result.data;
+      }
+      update({ resume: accepted, tailored: null, scoreAfter: after, coverLetter: "" });
+      setSuggestionDetails({});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add changes. Please try again.");
+    } finally { setBusy(""); }
   };
 
   const score = state.scoreAfter ?? state.scoreBefore;
@@ -123,8 +142,20 @@ function ReviewPage() {
               <div className="pop-in space-y-3 rounded-lg border border-accent bg-accent/20 p-4">
                 <p className="text-sm font-semibold">AI-tailored version ready</p>
                 <p className="text-xs text-muted-foreground">
-                  Your editable resume is unchanged. Add the tailored version to keep editing it — the export page uses the ATS-friendly version either way.
+                  Ready to add the rewritten summary, skills and experience.
                 </p>
+                {state.tailorNotes?.suggestions.map((suggestion, i) => (
+                  <div key={i} className="space-y-2 border-t border-border pt-3">
+                    <p className="text-sm">{suggestion}</p>
+                    <label className="label-text" htmlFor={`suggestion-section-${i}`}>Resume section</label>
+                    <select id={`suggestion-section-${i}`} className="field" value={suggestionDetails[i]?.section ?? "projects"} onChange={(e) => setSuggestionDetails((current) => ({ ...current, [i]: { text: current[i]?.text ?? "", section: e.target.value as SuggestionDetail["section"] } }))}>
+                      <option value="summary">Professional Summary</option><option value="skills">Skills</option><option value="projects">Projects</option><option value="certifications">Certifications</option>
+                      {state.tailored?.experience.map((entry, index) => <option key={index} value={`experience:${index}`}>{entry.title || `Experience ${index + 1}`}{entry.company ? ` — ${entry.company}` : ""}</option>)}
+                    </select>
+                    <label className="label-text" htmlFor={`suggestion-detail-${i}`}>Your actual details (optional)</label>
+                    <textarea id={`suggestion-detail-${i}`} className="field min-h-24" placeholder="Only skills you have, work you did, or courses you completed." value={suggestionDetails[i]?.text ?? ""} onChange={(e) => setSuggestionDetails((current) => ({ ...current, [i]: { section: current[i]?.section ?? "projects", text: e.target.value } }))} />
+                  </div>
+                ))}
                 <Button className="btn btn-accent w-full" disabled={!!busy} onClick={addToResume}>Add to resume</Button>
               </div>
             )}
@@ -136,9 +167,9 @@ function ReviewPage() {
               </div>
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <button className="btn btn-ghost w-full" disabled={!canTailor} onClick={tailor}>
+            <Button className="btn btn-ghost w-full" disabled={!canTailor} onClick={tailor}>
               {busy || "Tailor to job (AI)"}
-            </button>
+            </Button>
             <p className="text-xs text-muted-foreground">
               {state.jdAnalysis
                 ? left > 0
@@ -147,7 +178,7 @@ function ReviewPage() {
                 : "Paste a job description first to enable tailoring."}
             </p>
             {!state.jdAnalysis && <Link to="/job" className="btn btn-ghost w-full">← Add a job description</Link>}
-            <Button className="btn btn-primary w-full" disabled={!!busy} onClick={() => (issues.length ? setShowIssues(true) : navigate({ to: "/download" }))}>Continue to export →</Button>
+            <Button className="btn btn-primary w-full" disabled={!!busy} onClick={() => state.tailored ? setError('Choose “Add to resume” to accept your AI changes before exporting.') : issues.length ? setShowIssues(true) : navigate({ to: "/download" })}>Continue to export →</Button>
           </div>
         </aside>
       </div>
