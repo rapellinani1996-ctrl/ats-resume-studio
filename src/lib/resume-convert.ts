@@ -61,3 +61,18 @@ export function toSpec(r: Resume) {
 }
 
 export const bulletLines = lines;
+
+/** Tailoring edits content, not identity, and must not erase omitted sections. */
+export function mergeTailoredResume(p: Partial<ParsedResume>, base: Resume): Resume {
+  const converted = fromParsed(p, base);
+  return {
+    ...converted,
+    personal: { ...base.personal },
+    summary: converted.summary.trim() ? converted.summary : base.summary,
+    skills: converted.skills.trim() ? converted.skills : base.skills,
+    experience: p.experience?.length ? converted.experience : base.experience,
+    education: p.education?.length ? converted.education : base.education,
+    certifications: converted.certifications.trim() ? converted.certifications : base.certifications,
+    projects: converted.projects.trim() ? converted.projects : base.projects,
+  };
+}

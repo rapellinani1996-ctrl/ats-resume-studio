@@ -12,6 +12,8 @@ export const Route = createFileRoute("/job")({
       { name: "description", content: "Paste the job description you're targeting to analyze keywords and fit." },
       { property: "og:title", content: "Paste Job Description — ATS Resume Builder" },
       { property: "og:description", content: "Paste the job description you're targeting to analyze keywords and fit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: JobPage,

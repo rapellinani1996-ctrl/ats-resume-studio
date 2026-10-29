@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
-import { EducationFields, ExperienceFields, PersonalFields, SkillsField, resumeIssues, useResumeEdit } from "@/components/ResumeFields";
+import { EducationFields, ExperienceFields, ExtrasFields, PersonalFields, SkillsField, resumeIssues, useResumeEdit } from "@/components/ResumeFields";
+import { Button } from "@/components/ui/button";
 import { scoreResume, tailorResume } from "@/lib/ai.functions";
 import { DAILY_LIMIT, consume, remaining } from "@/lib/rate-limit";
-import { fromParsed, toSpec } from "@/lib/resume-convert";
+import { mergeTailoredResume, toSpec } from "@/lib/resume-convert";
 import { useResume } from "@/lib/resume-store";
 
 export const Route = createFileRoute("/review")({
@@ -14,6 +15,8 @@ export const Route = createFileRoute("/review")({
       { name: "description", content: "Edit your tailored resume and see your ATS match score and keyword gaps." },
       { property: "og:title", content: "Review & Edit — ATS Resume Builder" },
       { property: "og:description", content: "Edit your tailored resume and see your ATS match score and keyword gaps." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ReviewPage,
@@ -46,7 +49,7 @@ function ReviewPage() {
       setBusy("Tailoring your resume to the job…");
       const t = await tailorResume({ data: { resumeJson: JSON.stringify(toSpec(r)), jdJson: JSON.stringify(state.jdAnalysis) } });
       if (!t.ok) throw new Error(t.error);
-      const tailored = fromParsed(t.data, r);
+      const tailored = mergeTailoredResume(t.data, r);
       setBusy("Scoring before & after…");
       const [before, after] = await Promise.all([
         scoreResume({ data: { resumeJson: JSON.stringify(toSpec(r)), jdJson: JSON.stringify(state.jdAnalysis) } }),
@@ -72,7 +75,8 @@ function ReviewPage() {
     if (state.tailored) update({ resume: state.tailored, tailored: null });
   };
 
-  const ats = state.scoreAfter ?? state.scoreBefore ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: (state.scoreAfter ?? state.scoreBefore)!.total_score, matched: (state.scoreAfter ?? state.scoreBefore)!.matched_keywords, missing: (state.scoreAfter ?? state.scoreBefore)!.missing_keywords, fixes: (state.scoreAfter ?? state.scoreBefore)!.top_3_fixes } : null;
+  const score = state.scoreAfter ?? state.scoreBefore;
+  const ats = score ? { scoreBefore: state.scoreBefore?.total_score ?? 0, scoreAfter: score.total_score, matched: score.matched_keywords, missing: score.missing_keywords, fixes: score.top_3_fixes } : null;
   return (
     <PageShell step={2} title="Review & edit" subtitle="Every line should be something you can defend in an interview.">
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -84,6 +88,7 @@ function ReviewPage() {
           <Section title="Experience"><ExperienceFields notesLabel="Bullets" /></Section>
           <Section title="Skills"><SkillsField /></Section>
           <Section title="Education"><EducationFields /></Section>
+          <Section title="Projects & certifications"><ExtrasFields /></Section>
         </div>
         <aside className="lg:sticky lg:top-6 lg:self-start">
           <div className="card-surface space-y-6 p-6">
@@ -120,9 +125,10 @@ function ReviewPage() {
                 <p className="text-xs text-muted-foreground">
                   Your editable resume is unchanged. Add the tailored version to keep editing it — the export page uses the ATS-friendly version either way.
                 </p>
-                <button className="btn btn-accent w-full" onClick={addToResume}>Add to resume</button>
+                <Button className="btn btn-accent w-full" disabled={!!busy} onClick={addToResume}>Add to resume</Button>
               </div>
             )}
+            {state.tailorNotes && !state.tailored && <p role="status" className="text-sm text-success">AI changes added to your resume.</p>}
             {showIssues && issues.length > 0 && (
               <div className="pop-in space-y-1 rounded-lg border border-border bg-secondary/40 p-3">
                 <p className="text-xs font-semibold">A few details need a quick update:</p>
@@ -141,7 +147,7 @@ function ReviewPage() {
                 : "Paste a job description first to enable tailoring."}
             </p>
             {!state.jdAnalysis && <Link to="/job" className="btn btn-ghost w-full">← Add a job description</Link>}
-            <button className="btn btn-primary w-full" onClick={() => (issues.length ? setShowIssues(true) : navigate({ to: "/download" }))}>Continue to export →</button>
+            <Button className="btn btn-primary w-full" disabled={!!busy} onClick={() => (issues.length ? setShowIssues(true) : navigate({ to: "/download" }))}>Continue to export →</Button>
           </div>
         </aside>
       </div>

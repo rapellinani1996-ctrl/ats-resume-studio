@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 /**
  * Web-based share row for a block of text (resume or cover letter).
@@ -44,38 +45,40 @@ export function ShareButtons({ text, title, onPrint }: { text: string; title: st
   };
 
   const copy = async () => {
-    if (await copyText(text)) flash("Copied to clipboard.");
+    flash(await copyText(text) ? "Copied to clipboard." : "Copy was blocked by your browser. Select and copy the preview text instead.");
   };
 
   // Gmail compose in the browser — the desktop mail app never takes over.
   const email = () => {
     const long = text.length > MAX_URL_TEXT;
     const body = trimForUrl(text);
-    void copyText(long ? text : `${title}\n\n${body}`);
+    void copyText(long ? text : `${title}\n\n${body}`).then((copied) => {
+      if (long) flash(copied ? "Full text copied — paste it into the email." : "Select and copy the preview text to include the full resume in your email.");
+    });
     open(
       `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`,
     );
-    if (long) flash("Full text copied — paste it into the email.");
   };
 
   // WhatsApp Web in a browser tab; full text stays on the clipboard as a backup.
   const whatsapp = () => {
     const full = `${title}\n\n${text}`;
     const long = full.length > MAX_URL_TEXT;
-    void copyText(full);
+    void copyText(full).then((copied) => {
+      if (long) flash(copied ? "Full text copied — paste it into WhatsApp." : "Select and copy the preview text to send the full resume in WhatsApp.");
+    });
     open(`https://api.whatsapp.com/send?text=${encodeURIComponent(trimForUrl(full))}`);
-    if (long) flash("Full text copied — paste it into WhatsApp.");
   };
 
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <button className="btn btn-ghost" onClick={email}>Email</button>
-        <button className="btn btn-ghost" onClick={whatsapp}>WhatsApp</button>
-        <button className="btn btn-ghost" onClick={copy}>Copy</button>
-        {onPrint && <button className="btn btn-ghost" onClick={onPrint}>Print</button>}
+        <Button variant="outline" onClick={email}>Email</Button>
+        <Button variant="outline" onClick={whatsapp}>WhatsApp</Button>
+        <Button variant="outline" onClick={copy}>Copy</Button>
+        {onPrint && <Button variant="outline" onClick={onPrint}>Print</Button>}
       </div>
-      {hint && <p className="mt-2 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p role="status" className="mt-2 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

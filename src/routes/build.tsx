@@ -13,6 +13,8 @@ export const Route = createFileRoute("/build")({
       { name: "description", content: "A guided, step-by-step form to build your resume from raw notes." },
       { property: "og:title", content: "Build Your Resume — ATS Resume Builder" },
       { property: "og:description", content: "A guided, step-by-step form to build your resume from raw notes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: BuildPage,
